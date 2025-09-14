@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>グループ分けツール</title>
+
+<style>
+  :root {
+    --bg-color: #B0E0E6;
+    --button-color: #B3F5DD;
+    --button-text: #111;
+    --modal-bg: #fff;
+    --modal-text: #111;
+    --item-bg: #E0FFFF;
+    --item-selected: #B2DFDB;
+    --border-color: #999;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "メイリオ", sans-serif;
+    background-color: var(--bg-color);
+    color: var(--button-text);
+    padding: 15px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 1.8em;
+    margin-bottom: 10px;
+  }
+
+  p {
+    text-align: center;
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 15px;
+  }
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    font-size: 16px;
+    background-color: var(--button-color);
+    color: var(--button-text);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    opacity: 0.85;
+  }
+
+  #result {
+    white-space: pre-wrap;
+    background-color: #E0FFFF;
+    color: var(--button-text);
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-top: 20px;
+    font-family: "Courier New", monospace;
+    font-size: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  #nameGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .nameItem {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--item-bg);
+    cursor: pointer;
+  }
+
+  .nameItem.selected {
+    background: var(--item-selected);
+  }
+
+  .nameItem input {
+    margin-right: 8px;
+  }
+
+  /* モーダル */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal {
+    background: var(--modal-bg);
+    color: var(--modal-text);
+    padding: 20px;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+  }
+
+  .modal input {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .actions button {
+    flex: 1;
+  }
+
+</style>
+</head>
+<body>
+
+<h1>グループ分けツール</h1>
+<p>チェックを入れた人だけでグループ分けできます（出力時に「ちゃん」が付きます）</p>
+
+<!-- 新規登録・削除ボタン -->
+<button onclick="openModal()">👤 ＋新規登録</button>
+<button onclick="deleteSelected()">🗑 メンバー削除</button>
+
+<!-- 固定名簿を表示するグリッド -->
+<div id="nameGrid"></div>
+
+<button onclick="makeGroups()">👻 グループ作成</button>
+<button onclick="resetResult()">🗑 履歴リセット</button>
+<button onclick="copyResult()">✔️ 結果をコピー</button>
+
+<div id="result"></div>
+
+<!-- 新規登録モーダル -->
+<div id="modalOverlay" class="overlay">
+  <div class="modal">
+    <h2>🆕 メンバー登録</h2>
+    <input type="text" id="newDisplay" placeholder="表示名を入力">
+    <input type="text" id="newOutput" placeholder="出力名を入力">
+    <div class="actions">
+      <button onclick="closeModal()">キャンセル</button>
+      <button onclick="addMember()">登録</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let members = [
+  { display: "Hei", output: "へいちゃん" },
+  { display: "sabaris", output: "さばちゃん" },
+  { display: "Lapis", output: "ラピちゃん" },
+  { display: "TAMA", output: "たまちゃん" }
+];
+
+// グリッド生成
+function renderGrid() {
+  const grid = document.getElementById("nameGrid");
+  grid.innerHTML = "";
+  members.forEach((m, idx) => {
+    const item = document.createElement("div");
+    item.className = "nameItem";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = "chk" + idx;
+    const label = document.createElement("label");
+    label.setAttribute("for","chk"+idx);
+    label.textContent = m.display;
+
+    checkbox.addEventListener("change", () => {
+      item.classList.toggle("selected", checkbox.checked);
+    });
+
+    item.appendChild(checkbox);
+    item.appendChild(label);
+    grid.appendChild(item);
+  });
+}
+renderGrid();
+
+// 新規登録モーダル
+function openModal(){ document.getElementById("modalOverlay").style.display="flex"; }
+function closeModal(){ document.getElementById("modalOverlay").style.display="none"; }
+
+function addMember(){
+  const d = document.getElementById("newDisplay").value.trim();
+  const o = document.getElementById("newOutput").value.trim();
+  if(!d||!o) return;
+  members.push({ display:d, output:o+"ちゃん" });
+  renderGrid(); closeModal();
+}
+
+// メンバー削除
+function deleteSelected(){
+  const checked = members.map((m,i)=>document.getElementById("chk"+i).checked);
+  if(!checked.includes(true)) return;
+  if(confirm("このメンバーを削除しますか？")){
+    for(let i=members.length-1;i>=0;i--){
+      if(checked[i]) members.splice(i,1);
+    }
+    renderGrid();
+  }
+}
+
+// グループ作成（既存4人ランダム分け）
+function makeGroups(){
+  const checkedMembers = [];
+  members.forEach((m, idx)=>{
+    if(document.getElementById("chk"+idx).checked) checkedMembers.push(m.output);
+  });
+  if(checkedMembers.length===0) return;
+
+  // シャッフル
+  for(let i=checkedMembers.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [checkedMembers[i],checkedMembers[j]]=[checkedMembers[j],checkedMembers[i]];
+  }
+
+  // グループ分け
+  const groupSizes=[];
+  let remaining = checkedMembers.length;
+  while(remaining>0){
+    if(remaining>=4) groupSizes.push(4), remaining-=4;
+    else groupSizes.push(remaining), remaining=0;
+  }
+
+  const groups=[];
+  let index=0;
+  for(let size of groupSizes){
+    groups.push(checkedMembers.slice(index,index+size));
+    index+=size;
+  }
+
+  const groupLabels="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("ja-JP",{year:"2-digit",month:"2-digit",day:"2-digit"})+" "+now.toTimeString().slice(0,5);
+  const stars = "☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆"; //21個
+  let output = stars+"\n";
+  output += `${dateStr} 時点\n※左の人から貼っていこー！\n\n`;
+  groups.forEach((group,i)=>{
+    const label = `ｸﾞﾙｰﾌﾟ${groupLabels[i]}（${group.length}人）：`;
+    output += `${label}${group.join("、")}\n-------------------------------\n`;
+  });
+  output += "\n"+stars;
+  document.getElementById("result").innerText = output;
+}
+
+// リセット・コピー
+function resetResult(){ document.getElementById("result").innerText=""; }
+function copyResult(){
+  const t=document.getElementById("result").innerText;
+  navigator.clipboard.writeText(t).then(()=>alert("結果をコピーしました！"));
+}
+</script>
+
+</body>
+</html>
